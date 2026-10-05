@@ -677,7 +677,10 @@ bool ElfReader::LoadSegments() {
     int prot = PFLAGS_TO_PROT(phdr->p_flags);
     if(prot & PROT_WRITE) {
       auto my_seg_page_start = seg_page_start & ~(4 * 4096 - 1);
-      auto myseg_page_end = (seg_page_end + 4 * 4096) & ~(4 * 4096 - 1);
+      // Round the exclusive end up, without adding a page when it is already
+      // aligned. An extra RW page here removes execute permission from a
+      // following PT_LOAD (e.g. an RX initializer immediately after BSS).
+      auto myseg_page_end = (seg_page_end + 4 * 4096 - 1) & ~(4 * 4096 - 1);
       size_t seg_size = myseg_page_end - my_seg_page_start;
       void* seg_addr = mmap(reinterpret_cast<void*>(my_seg_page_start), seg_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
       if (seg_addr == MAP_FAILED) {
